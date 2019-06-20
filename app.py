@@ -1,8 +1,11 @@
 from chalice import Chalice
 import numpy as np
+from time import gmtime,strftime
+
 
 app = Chalice(app_name='sine-simu')
 
+cycle_arr=sinearr=np.linspace(0.2,3.1,120)
 
 @app.route('/')
 def index():
@@ -13,6 +16,19 @@ def get_sine(value):
     num=float(value)
     print(num)
     sine=44*np.sin(num)
+    print(sine)
+    return {"Prediction":{"num_of_gameservers": sine}}
+
+
+@app.route('/currsine')
+def get_curr_sine():
+    current_min=strftime("%M", gmtime())
+    print(current_min)
+    if (current_min>59):
+        current_point=cycle_arr[int(current_min)+60]
+    else:
+        current_point=cycle_arr[int(current_min)]
+    sine=44*np.sin(current_point)
     print(sine)
     return {"Prediction":{"num_of_gameservers": sine}}
 
