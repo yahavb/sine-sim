@@ -5,7 +5,7 @@ from time import gmtime,strftime
 
 app = Chalice(app_name='sine-simu')
 
-cycle_arr=sinearr=np.linspace(0.2,3.1,120)
+cycle_arr=sinearr=np.linspace(0.2,3.1,121)
 
 @app.route('/')
 def index():
@@ -23,13 +23,17 @@ def get_sine(value):
 @app.route('/currsine')
 def get_curr_sine():
     current_min=strftime("%M", gmtime())
-    print(current_min)
-    if (current_min>59):
-        current_point=cycle_arr[int(current_min)+60]
+    print("current_min="+str(current_min))
+    current_hour=int(strftime("%I", gmtime()))
+    print("current_hour="+str(current_hour))
+
+    if (current_hour%2):
+       current_point=cycle_arr[int(current_min)]
     else:
-        current_point=cycle_arr[int(current_min)]
+       current_point=cycle_arr[int(current_min)+60]
+    print("current_point="+str(current_point))
     sine=44*np.sin(current_point)
-    print(sine)
+    print("sine="+str(sine))
     return {"Prediction":{"num_of_gameservers": sine}}
 
 # The view function above will return {"hello": "world"}
