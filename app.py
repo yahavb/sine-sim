@@ -10,22 +10,16 @@ app = Chalice(app_name='sine-simu')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('observations')
 
-class Observation:
-   history = []
-   def __init__(self):
-        print("in __init__")
-        self.demand_history_len=5
-   
-   def append_obs(self,obs):
-        print('in append_obs')
-        self.history=self.history[1:] # shift the observation by one to remove one history point
-        self.history=np.append(self.history,obs)
-        print(self.history)
 
-   def get_history(self):
-        return self.history
-
-observations=Observation()
+def deserializer(items,observations):
+    print('in deserializer '+str(items))
+    items=items.replace("[","") 
+    items=items.replace("]","") 
+    print('items='+str(items))
+    for num in items.split(" "):
+       if (num):
+         print('num='+str(num))
+         observations.append(float(num))
 
 @app.route('/')
 def index():
@@ -69,9 +63,10 @@ def get_curr_sine2h():
     print("sine="+str(sine))
     return {"Prediction":{"num_of_gameservers": sine}}
 
-@app.route('/inferences')
-def get_inferences():
+@app.route('/latest_gs_inference')
+def get_latest_gs_inference():
     print('in get_inferences')
+    observations=[]
     response = table.get_item(
     Key={
       'key': 'observation'
@@ -80,5 +75,39 @@ def get_inferences():
     x=json.dumps(response['Item'])
     print(x)
     item = response['Item']['value']
-    observation=json.dumps(item)
-    return {"Prediction":{"num_of_gameservers": observation}}
+    print(item)
+    deserializer(item,observations)
+    print('observations='+str(observations))
+    #inference=np.percentile(observations,90)
+    return {"Prediction":{"observations": observations}}
+    #return {"Prediction":{"num_of_gameservers": str(inference)}}
+
+def get_last_obs_arr():
+    print('in get_last_obs_arr')
+    observations=[]
+    response = table.get_item(
+    Key={
+      'key': 'observation'
+    }
+    )
+    x=json.dumps(response['Item'])
+    item = response['Item']['value']
+    deserializer(item,observations)
+    print('observations='+str(observations))
+    return observations
+
+@app.route('/put_latest_gs_inference/{value}')
+def put_latest_gs_inference(value):
+    print ('in put_latest_gs_inference='+str(value))
+    observations=get_last_obs_arr()
+    observations=observations[1:]
+    observations=np.append(observations,float(value))
+    observations=str(observations)
+    print ('observations='+observations)
+    table.put_item(
+       Item={
+          'key': 'observation',
+          'value': observations
+       }
+    )
+    return {"Inference":{"value": str(observations)}}
